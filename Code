@@ -1,0 +1,262 @@
+#include <iostream>
+
+struct Node
+{
+	int data;
+	Node* next;
+
+	Node(int data)
+	{
+		this->data = data;
+		next = nullptr;
+	}
+	Node(const Node& other) : Node(other.data)
+	{
+
+	}
+
+	Node(Node&& node) noexcept : Node(node.data)
+	{
+		next = node.next;
+		node.next = nullptr;
+	}
+};
+
+class Queue
+{
+private:
+	Node* head;
+	Node* tail;
+
+public:
+
+	Queue() 
+	{
+		head = nullptr;
+		tail = nullptr;
+	}
+
+	Queue(int&& data) 
+	{
+		head = new Node(data);
+		tail = head;
+	}
+
+	Queue(const Queue& other) : Queue()
+	{
+		if (other.head == nullptr)
+		{
+			return;
+		}
+
+		head = new Node(*other.head);
+		tail = head;
+		Node* otherCurrent = other.head->next;
+
+		while (otherCurrent != nullptr)	
+		{
+			tail->next = new Node(*otherCurrent);
+			tail = tail->next;
+			otherCurrent = otherCurrent->next;
+		}
+	}
+
+	Queue(Queue&& other) noexcept
+	{
+		head = other.head;
+		tail = other.tail;
+
+		other.head = nullptr;
+		other.tail = nullptr;
+	}
+
+	~Queue()
+	{
+		while (head != nullptr)
+		{
+			Node* nextNode = head->next;
+			delete head;
+			head = nextNode;
+		}
+	}
+
+public:
+	friend std::ostream& operator<<(std::ostream& output, Queue& out); // Вивід в консоль
+	friend std::istream& operator>>(std::istream& input, Queue& in); // Запис з консолі
+	void operator<<(int&& data); // Запис з коду
+	int operator>(int* owner); // Зчитування без вилучення
+	int operator>>(int* owner); // Зчитування зі вилученням
+	explicit operator int*(); // Конвертація в масив
+	bool operator==(const Queue& other); // ==
+	bool operator!=(const Queue& other); // !=
+	Queue& operator=(const Queue& other); // Assignment operator
+
+private:
+	void AddNode(int data);
+	int getSize();
+	bool isIdentical(Queue other);
+};
+
+void Queue::AddNode(int data)
+{
+	Node* insert = new Node(data);
+
+	if (head == nullptr)
+	{
+		head = insert;
+		tail = head;
+		return;
+	}
+	tail->next = insert;
+	tail = insert;
+}
+
+int Queue::getSize()
+{
+	int size = 0;
+	Node* current = head;
+	while (current != nullptr)
+	{
+		size++;
+		current = current->next;
+	}
+	return size;
+}
+
+bool Queue::isIdentical(Queue other) 
+{
+	Node* current0 = head;
+	Node* current1 = other.head;
+
+	if (getSize() != other.getSize())
+		return 0;
+
+	while (current0 != nullptr)
+	{
+		if (current0->data != current1->data)
+			return 0;
+		current0 = current0->next;
+		current1 = current1->next;
+	}
+	return 1;
+}
+
+void Queue::operator<<(int&& data)
+{
+	AddNode(data);
+}
+
+int Queue::operator>(int* owner)
+{
+	if (head == nullptr)
+	{
+		return -1;
+	}
+	*owner = head->data;
+	return *owner;
+}
+
+int Queue::operator>>(int* owner)
+{
+	if (head == nullptr)
+	{
+		return -1;
+	}
+	*owner = head->data;
+	Node* temp = head;
+	head = head->next;
+	delete temp;
+	return *owner;
+}
+
+
+Queue::operator int*()
+{
+	int size = getSize();
+	int* array = new int[size];
+
+	Node* current = head;
+
+	for (int i = 0; i < size; i++)
+	{
+		array[i] = current->data;
+		current = current->next;
+	}
+	return array;
+}
+
+bool Queue::operator==(const Queue& other)
+{
+	return isIdentical(other);
+}
+
+bool Queue::operator!=(const Queue& other)
+{
+	return !isIdentical(other);
+}
+
+Queue& Queue::operator=(const Queue& other)
+{
+	if (*this != other)
+	{
+		head = new Node(*other.head);
+		tail = head;
+		Node* otherCurrent = other.head->next;
+
+		while (otherCurrent != nullptr)
+		{
+			tail->next = new Node(*otherCurrent);
+			tail = tail->next;
+			otherCurrent = otherCurrent->next;
+		}
+		return *this;
+	}
+}
+
+std::istream& operator>>(std::istream& input, Queue& in)
+{
+	int data;
+	input >> data;
+	in.AddNode(data);
+	return input;
+}
+
+std::ostream& operator<<(std::ostream& output, Queue& out)
+{
+	Node* iterator = out.head;
+	while (iterator != nullptr)
+	{
+		std::cout << iterator->data << ' ';
+		iterator = iterator->next;
+	}
+	std::cout << '\n';
+	return output;
+}
+
+int main()
+{
+	Queue test1;
+	test1 << 1;
+	test1 << 2;
+	test1 << 3;
+	std::cout << test1;
+
+	Queue test2;
+	for (int i = 0; i < 3; i++)
+	{
+		std::cin >> test2;
+	}
+
+	if (test2 == test1)
+		std::cout << "Identical" << '\n';
+	else
+		std::cout << "Not Identical" << '\n';
+
+	Queue test3;
+	test3 = test2;
+
+	int k;
+	std::cout << (test3 >> &k) << '\n';
+	std::cout << (test3 > &k) << '\n';
+	std::cout << (test3 > &k) << '\n';
+}
